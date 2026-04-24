@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile — Campus SkillSwap{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+
+    <div class="auth-card card">
+      <div class="card-header">
+        <h2><i class="bi bi-person-circle me-2"></i>My Profile</h2>
+        <p class="mb-0 opacity-75">@{{ user.username }}</p>
+      </div>
+
+      <div class="card-body p-4">
+
+        <!-- Avatar + current public ID -->
+        <div class="text-center mb-4">
+          <div style="
+              width:80px; height:80px; border-radius:50%;
+              background:linear-gradient(135deg,var(--primary),#9b5de5);
+              display:inline-flex; align-items:center; justify-content:center;
+              font-size:2rem; font-weight:800; color:white;">
+            {% if user.first_name %}
+              {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+            {% else %}
+              {{ user.username|first|upper }}
+            {% endif %}
+          </div>
+
+          {% if user.first_name or user.last_name %}
+            <h4 class="mt-2 mb-0 fw-bold">{{ user.first_name }} {{ user.last_name }}</h4>
+          {% endif %}
+
+          <!-- Show the current custom ID (or pk if not set) -->
+          <p class="mt-1 mb-0">
+            <span class="badge" style="background:var(--primary); font-size:0.85rem; letter-spacing:0.5px;">
+              ID: {% if user.profile.custom_id %}{{ user.profile.custom_id }}{% else %}#{{ user.pk }} (not set){% endif %}
+            </span>
+          </p>
+          <p class="text-muted small mt-1">Member since {{ user.date_joined|date:"N Y" }}</p>
+        </div>
+
+        <!-- Single form that submits both ProfileForm and UserProfileForm fields -->
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <h6 class="fw-bold text-muted text-uppercase mb-3" style="font-size:0.75rem; letter-spacing:1px;">
+            Account Details
+          </h6>
+
+          {% for field in form %}
+            <div class="mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% for error in field.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+          <hr>
+
+          <h6 class="fw-bold text-muted text-uppercase mb-1" style="font-size:0.75rem; letter-spacing:1px;">
+            Public User ID
+          </h6>
+          <p class="text-muted small mb-3">
+            This is the ID other users see next to your name across the site.
+            Leave blank to show your system ID instead.
+          </p>
+
+          {% for field in profile_form %}
+            <div class="mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+              {% for error in field.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i> Save Changes
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+
+        <!-- Account actions -->
+        <hr class="mt-5">
+        <h6 class="fw-bold text-muted text-uppercase mb-3" style="font-size:0.75rem; letter-spacing:1px;">
+          Account Actions
+        </h6>
+        <div class="d-flex flex-column gap-2">
+          <a href="{% url 'change-password' %}" class="btn btn-outline-primary">
+            <i class="bi bi-lock me-1"></i> Change Password
+          </a>
+          <a href="{% url 'delete-account' %}"
+             class="btn btn-outline-danger"
+             onclick="return confirm('Are you sure you want to go to the account deletion page?')">
+            <i class="bi bi-trash me-1"></i> Delete My Account
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django
+db.sqlite3
+*.sqlite3
+*.log
+local_settings.py
+media/
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Static files collected by collectstatic (not needed in dev)
+staticfiles/

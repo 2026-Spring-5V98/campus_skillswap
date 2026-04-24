@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Skill — Campus SkillSwap{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <h2 class="fw-bold mb-4">{{ action }} a Skill</h2>
+
+    <!--
+      novalidate stops the browser's built-in validation so Django's
+      server-side validation runs first — this shows nicer error messages.
+    -->
+    <form method="post" novalidate>
+      {% csrf_token %}  <!-- Django requires this on every POST form to prevent CSRF attacks -->
+
+      {% for field in form %}
+        <div class="mb-3">
+          <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+            {{ field.label }}
+          </label>
+
+          <!-- Render the field and inject Bootstrap classes via Python string replace -->
+          {% if field.field.widget.input_type == 'checkbox' %}
+            <div class="form-check">
+              {{ field }}
+              <label class="form-check-label" for="{{ field.id_for_label }}">
+                {{ field.label }}
+              </label>
+            </div>
+          {% else %}
+            <div>
+              {{ field }}
+            </div>
+          {% endif %}
+
+          <!-- Field-level help text (e.g. "Leave blank if free") -->
+          {% if field.help_text %}
+            <div class="form-text text-muted">{{ field.help_text }}</div>
+          {% endif %}
+
+          <!-- Field-level validation errors -->
+          {% for error in field.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <!-- Non-field errors (e.g. our price/free cross-field validation) -->
+      {% for error in form.non_field_errors %}
+        <div class="alert alert-danger">{{ error }}</div>
+      {% endfor %}
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-success px-4">{{ action }} Skill</button>
+        <a href="{% url 'skill-list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

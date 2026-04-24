@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load skill_tags %}
+
+{% block title %}{{ profile_user.username }}'s Profile — Campus SkillSwap{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- LEFT: Profile card -->
+  <div class="col-lg-4">
+    <div class="card detail-card">
+      <div class="card-header text-center py-4">
+
+        <!-- Initials avatar -->
+        <div style="
+            width:90px; height:90px; border-radius:50%;
+            background:rgba(255,255,255,0.2);
+            display:inline-flex; align-items:center; justify-content:center;
+            font-size:2.2rem; font-weight:800; color:white; margin-bottom:0.75rem;">
+          {% if profile_user.first_name %}
+            {{ profile_user.first_name|first|upper }}{{ profile_user.last_name|first|upper }}
+          {% else %}
+            {{ profile_user.username|first|upper }}
+          {% endif %}
+        </div>
+
+        <h4 class="fw-bold mb-0" style="color:white;">
+          {% if profile_user.first_name %}
+            {{ profile_user.first_name }} {{ profile_user.last_name }}
+          {% else %}
+            {{ profile_user.username }}
+          {% endif %}
+        </h4>
+        <p class="mb-0 opacity-75" style="color:white;">@{{ profile_user.username }}</p>
+      </div>
+
+      <div class="card-body text-center">
+        <!-- Average user rating -->
+        {% if avg_rating %}
+          <div class="mb-2">
+            <span class="stars fs-4">
+              {% for i in "12345" %}
+                {% if forloop.counter <= avg_rating %}
+                  <i class="bi bi-star-fill"></i>
+                {% else %}
+                  <i class="bi bi-star" style="color:#ddd;"></i>
+                {% endif %}
+              {% endfor %}
+            </span>
+            <div class="fw-bold fs-5">{{ avg_rating }} / 5</div>
+            <div class="text-muted small">{{ rating_count }} user rating{{ rating_count|pluralize }}</div>
+          </div>
+        {% else %}
+          <p class="text-muted small">No user ratings yet</p>
+        {% endif %}
+
+        <hr>
+        <div class="d-flex justify-content-around text-center">
+          <div>
+            <div class="fw-bold fs-5" style="color:var(--primary);">{{ skills.count }}</div>
+            <div class="text-muted small">Skills</div>
+          </div>
+          <div>
+            <div class="fw-bold fs-5" style="color:var(--primary);">{{ rating_count }}</div>
+            <div class="text-muted small">Ratings</div>
+          </div>
+        </div>
+        <hr>
+        <p class="text-muted small mb-0">
+          <i class="bi bi-calendar3 me-1"></i>
+          Member since {{ profile_user.date_joined|date:"N Y" }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Rate this user (only shown to other logged-in users who haven't rated yet) -->
+    {% if rating_form %}
+      <div class="card mt-3 shadow-sm" style="border-left: 4px solid var(--primary);">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3">
+            <i class="bi bi-star-fill text-warning me-1"></i>Rate {{ profile_user.username }}
+          </h6>
+          <form method="post" action="{% url 'rate-user' profile_user.username %}" id="user-rate-form">
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold d-block">Your Rating</label>
+              <div class="d-flex gap-2 align-items-center" id="pp-star-row">
+                {% for value, label in rating_form.fields.rating.choices %}
+                  <input type="radio" name="rating" id="ppstar{{ value }}"
+                         value="{{ value }}" class="visually-hidden" required>
+                  <label for="ppstar{{ value }}" class="pp-star"
+                         title="{{ value }} star{{ value|pluralize }}"
+                         style="cursor:pointer; color:#ddd; font-size:2.2rem; line-height:1; transition:color 0.1s;">
+                    <i class="bi bi-star-fill"></i>
+                  </label>
+                {% endfor %}
+                <span id="pp-hint" class="ms-2 fw-semibold small" style="color:var(--primary); min-width:80px;"></span>
+              </div>
+              {% for error in rating_form.rating.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-3">{{ rating_form.comment }}</div>
+
+            <button type="submit" class="btn btn-primary btn-sm w-100">Submit Rating</button>
+          </form>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          var stars  = document.querySelectorAll('.pp-star');
+          var inputs = document.querySelectorAll('#user-rate-form input[name="rating"]');
+          var hint   = document.getElementById('pp-hint');
+          var labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+          function paint(n) {
+            stars.forEach(function (s, i) { s.style.color = i < n ? 'var(--accent)' : '#ddd'; });
+            hint.textContent = labels[n] || '';
+          }
+
+          function restore() {
+            var checked = document.querySelector('#user-rate-form input[name="rating"]:checked');
+            paint(checked ? parseInt(checked.value) : 0);
+          }
+
+          stars.forEach(function (star, idx) {
+            star.addEventListener('mouseover', function () { paint(idx + 1); });
+            star.addEventListener('click',     function () { inputs[idx].checked = true; paint(idx + 1); });
+          });
+
+          document.getElementById('pp-star-row').addEventListener('mouseleave', restore);
+          restore();
+        })();
+      </script>
+
+    {% elif existing_rating %}
+      <!-- Show what the logged-in user already rated -->
+      <div class="card mt-3" style="border-left:4px solid var(--accent);">
+        <div class="card-body">
+          <p class="mb-1 fw-semibold">Your rating for {{ profile_user.username }}:</p>
+          <span class="stars fs-5">
+            {% for i in "12345" %}
+              {% if forloop.counter <= existing_rating.rating %}
+                <i class="bi bi-star-fill"></i>
+              {% else %}
+                <i class="bi bi-star" style="color:#ddd;"></i>
+              {% endif %}
+            {% endfor %}
+          </span>
+          {% if existing_rating.comment %}
+            <p class="text-muted small mt-1 mb-2">{{ existing_rating.comment }}</p>
+          {% endif %}
+          <a href="{% url 'delete-user-rating' existing_rating.pk %}"
+             class="btn btn-outline-danger btn-sm"
+             onclick="return confirm('Remove your rating?')">
+            <i class="bi bi-trash"></i> Remove Rating
+          </a>
+        </div>
+      </div>
+
+    {% elif not user.is_authenticated %}
+      <div class="card mt-3 text-center p-3">
+        <p class="text-muted mb-2">Log in to rate this user.</p>
+        <a href="{% url 'login' %}" class="btn btn-primary btn-sm">Log In</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- RIGHT: Skills + ratings received -->
+  <div class="col-lg-8">
+
+    <!-- Skills posted by this user -->
+    <h4 class="section-title"><i class="bi bi-collection me-2"></i>Skills by {{ profile_user.username }}</h4>
+
+    {% if skills %}
+      <div class="row row-cols-1 row-cols-md-2 g-3 mb-5">
+        {% for skill in skills %}
+          <div class="col">
+            <div class="skill-card card">
+              <div class="card-header">{{ skill.get_category_display }}</div>
+              <div class="card-body">
+                <h6 class="card-title fw-bold">{{ skill.title }}</h6>
+                <p class="small text-muted">{{ skill.description|truncatechars:70 }}</p>
+                {% if skill.is_free %}
+                  <span class="badge bg-success">Free</span>
+                {% else %}
+                  <span class="badge bg-primary">${{ skill.price }}</span>
+                {% endif %}
+              </div>
+              <div class="card-footer">
+                <a href="{% url 'skill-detail' skill.pk %}" class="btn btn-sm btn-outline-primary w-100">View</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state mb-4">
+        <i class="bi bi-collection" style="font-size:2rem;color:#c3adf8;"></i>
+        <p class="text-muted mt-2 mb-0">No skills posted yet.</p>
+      </div>
+    {% endif %}
+
+    <!-- Ratings received from other users -->
+    <h4 class="section-title"><i class="bi bi-people me-2"></i>User Ratings</h4>
+
+    {% if ratings %}
+      {% for r in ratings %}
+        <div class="review-card mb-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <a href="{% url 'public-profile' r.rater.username %}" class="fw-bold text-decoration-none">
+                {{ r.rater.username }}
+              </a>
+              <span class="stars ms-2">
+                {% for i in "12345" %}
+                  {% if forloop.counter <= r.rating %}
+                    <i class="bi bi-star-fill"></i>
+                  {% else %}
+                    <i class="bi bi-star" style="color:#ddd;"></i>
+                  {% endif %}
+                {% endfor %}
+              </span>
+            </div>
+            <small class="text-muted">{{ r.created_at|date:"N j, Y" }}</small>
+          </div>
+          {% if r.comment %}
+            <p class="mt-2 mb-0 text-muted">{{ r.comment }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="bi bi-star" style="font-size:2rem;color:#c3adf8;"></i>
+        <p class="text-muted mt-2 mb-0">No user ratings yet.</p>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

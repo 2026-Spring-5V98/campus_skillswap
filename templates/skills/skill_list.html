@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load skill_tags %}
+
+{% block title %}Browse Skills — Campus SkillSwap{% endblock %}
+
+{% block content %}
+
+<!-- Hero Banner -->
+<div class="hero text-center">
+  <h1><i class="bi bi-mortarboard-fill me-2"></i>Find a Skill on Campus</h1>
+  <p class="mb-4">Browse what your fellow students are offering — from coding to cooking.</p>
+
+  <!-- Search bar -->
+  <form method="get" class="search-bar d-flex justify-content-center">
+    <input type="text" name="q" class="form-control form-control-lg"
+           style="max-width:420px; border-radius:30px 0 0 30px;"
+           placeholder="Search skills…" value="{{ query }}">
+    {% if selected_category %}
+      <input type="hidden" name="category" value="{{ selected_category }}">
+    {% endif %}
+    <button class="btn-search" type="submit">Search</button>
+  </form>
+</div>
+
+<!-- Category filter pills -->
+<div class="mb-4 text-center">
+  <a href="{% url 'skill-list' %}{% if query %}?q={{ query }}{% endif %}"
+     class="category-pill {% if not selected_category %}active{% endif %}">All</a>
+  {% for value, label in categories %}
+    <a href="?category={{ value }}{% if query %}&q={{ query }}{% endif %}"
+       class="category-pill {% if selected_category == value %}active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<!-- Results header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="text-muted mb-0">
+    <strong>{{ skills.count }}</strong> skill{{ skills.count|pluralize }} found
+    {% if query %} for "<em>{{ query }}</em>"{% endif %}
+    {% if selected_category %} in <em>{{ selected_category|title }}</em>{% endif %}
+  </p>
+  {% if user.is_authenticated %}
+    <a href="{% url 'skill-create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Post Your Skill
+    </a>
+  {% endif %}
+</div>
+
+<!-- Skill cards -->
+{% if skills %}
+  <div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for skill in skills %}
+      <div class="col">
+        <div class="skill-card card">
+          <div class="card-header d-flex justify-content-between">
+            <span><i class="bi bi-tag-fill me-1"></i>{{ skill.get_category_display }}</span>
+            {% if skill.availability == 'available' %}
+              <span class="badge bg-success">Available</span>
+            {% elif skill.availability == 'busy' %}
+              <span class="badge bg-warning text-dark">Busy</span>
+            {% else %}
+              <span class="badge bg-danger">Unavailable</span>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">{{ skill.title }}</h5>
+            <p class="card-text text-muted small">{{ skill.description|truncatechars:90 }}</p>
+
+            <!-- Star rating summary -->
+            {% with avg=skill.average_rating count=skill.review_count %}
+              {% if avg %}
+                <div class="stars small">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= avg %}<i class="bi bi-star-fill"></i>
+                    {% else %}<i class="bi bi-star" style="color:#ddd;"></i>{% endif %}
+                  {% endfor %}
+                  <span class="text-muted ms-1">{{ avg }} ({{ count }})</span>
+                </div>
+              {% else %}
+                <small class="text-muted">No reviews yet</small>
+              {% endif %}
+            {% endwith %}
+          </div>
+          <div class="card-footer d-flex justify-content-between align-items-center">
+            <div>
+              {% if skill.is_free %}
+                <span class="badge bg-success"><i class="bi bi-gift"></i> Free</span>
+              {% else %}
+                <span class="badge bg-primary">${{ skill.price }}</span>
+              {% endif %}
+              <small class="text-muted ms-2">
+                by <a href="{% url 'public-profile' skill.owner.username %}" class="text-decoration-none">{{ skill.owner.username }}</a>
+              </small>
+            </div>
+            <a href="{% url 'skill-detail' skill.pk %}" class="btn btn-primary btn-sm">View</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-search" style="font-size:2.5rem; color:#c3adf8;"></i>
+    <h4 class="mt-3 text-muted">No skills found</h4>
+    {% if user.is_authenticated %}
+      <a href="{% url 'skill-create' %}" class="btn btn-primary mt-3">Post the First One</a>
+    {% else %}
+      <a href="{% url 'register' %}" class="btn btn-primary mt-3">Join &amp; Post a Skill</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

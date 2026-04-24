@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}My Dashboard — Campus SkillSwap{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold mb-0">My Dashboard</h2>
+    <p class="text-muted mb-0">Welcome back, <strong>{{ user.username }}</strong>!</p>
+  </div>
+  <a href="{% url 'skill-create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Post New Skill
+  </a>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-5">
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-purple">
+      <div class="stat-number">{{ my_skills.count }}</div>
+      <div class="stat-label"><i class="bi bi-collection"></i> Skills Posted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-blue">
+      <div class="stat-number">{{ incoming_bookings.count }}</div>
+      <div class="stat-label"><i class="bi bi-calendar-check"></i> Booking Requests</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-green">
+      <div class="stat-number">{{ total_reviews }}</div>
+      <div class="stat-label"><i class="bi bi-star"></i> Skill Reviews</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-gold">
+      <div class="stat-number">
+        {% if user_avg_rating %}{{ user_avg_rating }}★{% else %}—{% endif %}
+      </div>
+      <div class="stat-label"><i class="bi bi-people"></i> Your User Rating</div>
+    </div>
+  </div>
+</div>
+
+<!-- User Rating Summary Banner -->
+{% if user_rating_count %}
+  <div class="card mb-5 shadow-sm" style="border-left: 5px solid var(--accent);">
+    <div class="card-body d-flex flex-wrap align-items-center gap-4">
+      <div class="text-center">
+        <div class="fw-bold" style="font-size:2.8rem; color:var(--primary); line-height:1;">
+          {{ user_avg_rating }}
+        </div>
+        <div class="text-muted small">out of 5</div>
+      </div>
+      <div>
+        <div class="stars fs-3">
+          {% for i in "12345" %}
+            {% if forloop.counter <= user_avg_rating %}
+              <i class="bi bi-star-fill"></i>
+            {% else %}
+              <i class="bi bi-star" style="color:#ddd;"></i>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <p class="mb-0 text-muted">
+          Based on <strong>{{ user_rating_count }}</strong>
+          user rating{{ user_rating_count|pluralize }} from other students
+        </p>
+      </div>
+      <a href="{% url 'public-profile' user.username %}" class="btn btn-outline-primary btn-sm ms-auto">
+        <i class="bi bi-eye me-1"></i> View Public Profile
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Ratings received from other users -->
+<h4 class="section-title"><i class="bi bi-people me-2"></i>Ratings From Other Users</h4>
+
+{% if user_ratings_received %}
+  <div class="row row-cols-1 row-cols-md-2 g-3 mb-5">
+    {% for r in user_ratings_received %}
+      <div class="col">
+        <div class="review-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <a href="{% url 'public-profile' r.rater.username %}" class="fw-bold text-decoration-none">
+                {{ r.rater.username }}
+              </a>
+              <span class="stars ms-2">
+                {% for i in "12345" %}
+                  {% if forloop.counter <= r.rating %}
+                    <i class="bi bi-star-fill"></i>
+                  {% else %}
+                    <i class="bi bi-star" style="color:#ddd;"></i>
+                  {% endif %}
+                {% endfor %}
+              </span>
+              <span class="ms-1 fw-semibold text-muted">{{ r.rating }}/5</span>
+            </div>
+            <small class="text-muted">{{ r.created_at|date:"N j, Y" }}</small>
+          </div>
+          {% if r.comment %}
+            <p class="mt-2 mb-0 text-muted fst-italic">"{{ r.comment }}"</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state mb-5">
+    <i class="bi bi-people" style="font-size:2.5rem; color:#c3adf8;"></i>
+    <p class="text-muted mt-2 mb-0">No one has rated you yet.</p>
+    <p class="text-muted small">Ratings appear here when other users visit your profile and leave a score.</p>
+  </div>
+{% endif %}
+
+<!-- My Skill Posts -->
+<h4 class="section-title"><i class="bi bi-collection me-2"></i>My Skill Posts</h4>
+{% if my_skills %}
+  <div class="row row-cols-1 row-cols-md-2 g-3 mb-5">
+    {% for skill in my_skills %}
+      <div class="col">
+        <div class="skill-card card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h6 class="card-title fw-bold mb-1">{{ skill.title }}</h6>
+              {% if skill.availability == 'available' %}
+                <span class="badge bg-success">Available</span>
+              {% elif skill.availability == 'busy' %}
+                <span class="badge bg-warning text-dark">Busy</span>
+              {% else %}
+                <span class="badge bg-danger">Unavailable</span>
+              {% endif %}
+            </div>
+            <p class="small text-muted mb-1">{{ skill.description|truncatechars:60 }}</p>
+            <div class="d-flex gap-3 small text-muted">
+              <span><i class="bi bi-star-fill text-warning"></i>
+                {% with avg=skill.average_rating %}
+                  {% if avg %}{{ avg }}{% else %}No reviews{% endif %}
+                {% endwith %}
+              </span>
+              <span><i class="bi bi-calendar-check"></i> {{ skill.bookings.count }} booking{{ skill.bookings.count|pluralize }}</span>
+              <span><i class="bi bi-clock"></i> {{ skill.created_at|date:"N j" }}</span>
+            </div>
+          </div>
+          <div class="card-footer d-flex gap-2">
+            <a href="{% url 'skill-detail' skill.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+            <a href="{% url 'skill-update' skill.pk %}" class="btn btn-sm btn-warning">Edit</a>
+            <a href="{% url 'skill-delete' skill.pk %}" class="btn btn-sm btn-danger">Delete</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state mb-5">
+    <i class="bi bi-collection" style="font-size:2.5rem; color:#c3adf8;"></i>
+    <p class="text-muted mt-2">You haven't posted any skills yet.</p>
+    <a href="{% url 'skill-create' %}" class="btn btn-primary mt-1">Post Your First Skill</a>
+  </div>
+{% endif %}
+
+<!-- Incoming Booking Requests -->
+<h4 class="section-title"><i class="bi bi-inbox me-2"></i>Incoming Booking Requests</h4>
+{% if incoming_bookings %}
+  <div class="table-responsive mb-5">
+    <table class="table table-hover align-middle bg-white rounded shadow-sm">
+      <thead class="table-light">
+        <tr>
+          <th>From</th><th>Skill</th><th>Message</th><th>Date</th><th>Status</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in incoming_bookings %}
+          <tr>
+            <td><strong>{{ b.requester.username }}</strong></td>
+            <td><a href="{% url 'skill-detail' b.skill.pk %}">{{ b.skill.title }}</a></td>
+            <td class="text-muted small">{{ b.message|truncatechars:50 }}</td>
+            <td class="small">{% if b.proposed_date %}{{ b.proposed_date|date:"N j, Y" }}{% else %}—{% endif %}</td>
+            <td>
+              <span class="badge badge-{{ b.status }} px-2 py-1 rounded-pill">{{ b.get_status_display }}</span>
+            </td>
+            <td>
+              {% if b.status == 'pending' %}
+                <a href="{% url 'update-booking' b.pk 'accepted' %}" class="btn btn-sm btn-success me-1">Accept</a>
+                <a href="{% url 'update-booking' b.pk 'declined' %}" class="btn btn-sm btn-danger">Decline</a>
+              {% else %}
+                <span class="text-muted small">Done</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state mb-5">
+    <i class="bi bi-inbox" style="font-size:2.5rem; color:#c3adf8;"></i>
+    <p class="text-muted mt-2 mb-0">No booking requests yet.</p>
+  </div>
+{% endif %}
+
+<!-- My Outgoing Bookings -->
+<h4 class="section-title"><i class="bi bi-send me-2"></i>My Booking Requests</h4>
+{% if my_bookings %}
+  <div class="row row-cols-1 row-cols-md-2 g-3">
+    {% for b in my_bookings %}
+      <div class="col">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <h6 class="fw-bold mb-1">
+                <a href="{% url 'skill-detail' b.skill.pk %}" class="text-decoration-none">{{ b.skill.title }}</a>
+              </h6>
+              <span class="badge badge-{{ b.status }} rounded-pill px-2">{{ b.get_status_display }}</span>
+            </div>
+            <p class="small text-muted mb-1">Offered by <strong>{{ b.skill.owner.username }}</strong></p>
+            <p class="small mb-0">{{ b.message|truncatechars:70 }}</p>
+            {% if b.proposed_date %}
+              <p class="small text-muted mt-1"><i class="bi bi-calendar3"></i> {{ b.proposed_date|date:"N j, Y" }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-send" style="font-size:2.5rem; color:#c3adf8;"></i>
+    <p class="text-muted mt-2 mb-0">You haven't requested any sessions yet.</p>
+    <a href="{% url 'skill-list' %}" class="btn btn-primary mt-2">Browse Skills</a>
+  </div>
+{% endif %}
+
+{% endblock %}

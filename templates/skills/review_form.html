@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Review {{ skill.title }} — Campus SkillSwap{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="auth-card card">
+      <div class="card-header">
+        <h2><i class="bi bi-star-fill me-2"></i>Leave a Review</h2>
+        <p class="mb-0 opacity-75">for <strong>{{ skill.title }}</strong></p>
+      </div>
+
+      <div class="card-body p-4">
+        <form method="post" novalidate id="review-form">
+          {% csrf_token %}
+
+          <!-- 5-star interactive picker -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold d-block">Your Rating</label>
+
+            <div class="d-flex gap-2 align-items-center" id="star-row">
+              {% for value, label in form.fields.rating.choices %}
+                <input type="radio" name="rating" id="rev_star{{ value }}"
+                       value="{{ value }}" class="visually-hidden"
+                       {% if form.rating.value == value|stringformat:"s" %}checked{% endif %}
+                       required>
+                <label for="rev_star{{ value }}"
+                       class="rev-star"
+                       title="{{ value }} star{{ value|pluralize }}"
+                       style="cursor:pointer; color:#ddd; font-size:2.5rem; line-height:1; transition:color 0.1s;">
+                  <i class="bi bi-star-fill"></i>
+                </label>
+              {% endfor %}
+
+              <!-- Text hint that updates as you hover -->
+              <span id="rev-hint" class="ms-3 fw-semibold" style="font-size:1rem; color:var(--primary); min-width:90px;"></span>
+            </div>
+
+            {% for error in form.rating.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Comment -->
+          <div class="mb-3">
+            <label for="{{ form.comment.id_for_label }}" class="form-label fw-semibold">
+              Comment <span class="text-muted fw-normal">(optional)</span>
+            </label>
+            {{ form.comment }}
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-send me-1"></i> Submit Review
+            </button>
+            <a href="{% url 'skill-detail' skill.pk %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stars  = document.querySelectorAll('.rev-star');
+    var inputs = document.querySelectorAll('#review-form input[name="rating"]');
+    var hint   = document.getElementById('rev-hint');
+    var labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+    // Paint stars gold up to `count`, grey the rest
+    function paint(count) {
+      stars.forEach(function (s, i) {
+        s.style.color = i < count ? 'var(--accent)' : '#ddd';
+      });
+      hint.textContent = labels[count] || '';
+    }
+
+    // Restore to the currently selected value (or 0 if none)
+    function restore() {
+      var checked = document.querySelector('#review-form input[name="rating"]:checked');
+      paint(checked ? parseInt(checked.value) : 0);
+    }
+
+    stars.forEach(function (star, idx) {
+      // Hover: preview the rating
+      star.addEventListener('mouseover', function () { paint(idx + 1); });
+
+      // Click: lock in the selection
+      star.addEventListener('click', function () {
+        inputs[idx].checked = true;
+        paint(idx + 1);
+      });
+    });
+
+    // Mouse leaves the row: restore to selected state
+    document.getElementById('star-row').addEventListener('mouseleave', restore);
+
+    // On load: paint any pre-selected value (e.g. form validation re-render)
+    restore();
+  })();
+</script>
+
+{% endblock %}

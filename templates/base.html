@@ -1,0 +1,331 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Campus SkillSwap{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  <!--
+    Apply the saved theme BEFORE the page renders to prevent a flash
+    of the wrong theme. This tiny script runs synchronously in <head>.
+  -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ===== Navbar ===== -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="{% url 'skill-list' %}">🎓 Campus SkillSwap</a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'skill-list' %}"><i class="bi bi-grid"></i> Browse</a>
+          </li>
+          {% if user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'skill-create' %}"><i class="bi bi-plus-circle"></i> Post Skill</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'profile' %}"><i class="bi bi-person-circle"></i>
+                {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i> Login</a>
+            </li>
+            <li class="nav-item ms-2">
+              <a class="nav-link btn-register px-3 py-1" href="{% url 'register' %}">Register Free</a>
+            </li>
+          {% endif %}
+
+          <!-- Day / Night toggle button -->
+          <li class="nav-item ms-2">
+            <button id="theme-toggle" title="Toggle day / night mode">🌙</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== Flash Messages ===== -->
+  <div class="container mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill"></i>
+        {% elif message.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill"></i>
+        {% else %}<i class="bi bi-info-circle-fill"></i>{% endif %}
+        {{ message }}
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- ===== Page Content ===== -->
+  <main class="container my-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <div class="container text-center">
+      <p class="mb-1 fw-semibold" style="color:white;">🎓 Campus SkillSwap</p>
+      <p class="mb-0 small">Connecting students through skills &mdash; Built with Django &amp; Bootstrap</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ===== Dee — Floating Chatbot ===== -->
+  <button id="dee-toggle" title="Chat with Dee">💬</button>
+
+  <div id="dee-panel" role="dialog" aria-label="Dee assistant">
+    <div id="dee-header">
+      <div class="dee-avatar">🤖</div>
+      <div>
+        <div class="dee-name">Dee</div>
+        <div class="dee-status">Campus SkillSwap assistant</div>
+      </div>
+      <button id="dee-close" title="Close chat">✕</button>
+    </div>
+
+    <div id="dee-messages"></div>
+
+    <div class="dee-chips" id="dee-chips"></div>
+
+    <div id="dee-input-row">
+      <input id="dee-input" type="text" placeholder="Ask me anything…" autocomplete="off">
+      <button id="dee-send" title="Send"><i class="bi bi-send-fill"></i></button>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    /* ---- Knowledge base ---- */
+    var KB = [
+      {
+        keys: ['hello','hi','hey','howdy','sup','greetings','good morning','good afternoon'],
+        reply: "Hey there! 👋 I'm Dee, your Campus SkillSwap assistant. How can I help you today?"
+      },
+      {
+        keys: ['post skill','add skill','create skill','share skill','upload skill','list skill'],
+        reply: "To post a skill, click <strong>Post Skill</strong> in the top navbar (you must be logged in). Fill in the title, category, description, pricing, and how you'd like to be contacted, then hit Save. Your skill goes live instantly! 🎓"
+      },
+      {
+        keys: ['book','request session','booking','schedule','appointment','hire'],
+        reply: "To book a session, open a skill you like and click <strong>Request Booking</strong>. Leave a message, pick a proposed date, and send it off. The skill owner will accept or decline — you'll get an email notification either way! 📅"
+      },
+      {
+        keys: ['review','leave review','write review','rate skill','skill rating','star','stars'],
+        reply: "After viewing a skill, click <strong>Leave a Review</strong>. Pick 1–5 stars using the interactive picker and optionally add a comment. You can only review each skill once, and you can't review your own skills."
+      },
+      {
+        keys: ['rate user','user rating','rate person','rate someone','rating user'],
+        reply: "You can rate another user on their <strong>public profile page</strong> — just visit their profile and use the star form on the left. You can also rate a skill's owner directly from the skill detail page. One rating per user. ⭐"
+      },
+      {
+        keys: ['search','find skill','look for','browse','discover','explore'],
+        reply: "Use the search bar on the home page to search by keyword. You can also filter by category using the coloured category pills. Try searching for 'Python', 'guitar', or 'design'! 🔍"
+      },
+      {
+        keys: ['register','sign up','create account','join','new account'],
+        reply: "Click <strong>Register Free</strong> in the top-right corner. Choose a username, enter your email, and set a password. You'll be logged in automatically. It's free! 🎉"
+      },
+      {
+        keys: ['login','log in','sign in','access account'],
+        reply: "Click <strong>Login</strong> in the navbar, enter your username and password, and you're in. If you've forgotten your password, contact your site administrator."
+      },
+      {
+        keys: ['logout','log out','sign out'],
+        reply: "Click <strong>Logout</strong> in the navbar to safely end your session."
+      },
+      {
+        keys: ['dashboard','my dashboard','my stats','my bookings','my skills'],
+        reply: "Your <strong>Dashboard</strong> is your personal hub — it shows your posted skills, incoming booking requests, outgoing bookings, and ratings you've received from other users. Click Dashboard in the navbar."
+      },
+      {
+        keys: ['profile','edit profile','update profile','my profile','name','change name'],
+        reply: "Click your name (or username) in the navbar to go to your Profile page. There you can update your first name, last name, and email address."
+      },
+      {
+        keys: ['public profile','view profile','someone profile','user page'],
+        reply: "Every user has a public profile at <em>/user/&lt;username&gt;/</em>. It shows their posted skills, average rating, and reviews received. Click any username link in the app to visit their profile."
+      },
+      {
+        keys: ['price','free','paid','cost','how much','fee','charge'],
+        reply: "Skills can be marked as <strong>Free</strong> or given a price in USD. This is set by the skill owner when they post. Free skills show a green badge; paid skills show the price in blue."
+      },
+      {
+        keys: ['category','categories','type of skill','subject'],
+        reply: "Skills are grouped into categories like Technology, Music, Language, Art, Sports, Tutoring, and more. Use the category pills on the home page to filter by topic."
+      },
+      {
+        keys: ['email','notification','notify','alert'],
+        reply: "The platform sends email notifications when: (1) someone requests a booking on your skill, and (2) your booking request is accepted or declined. Make sure your email is set on your Profile page."
+      },
+      {
+        keys: ['delete','remove skill','remove review','remove rating','cancel'],
+        reply: "You can delete your own skills from the skill detail page (Edit → Delete). You can remove your own reviews and user ratings using the Remove button that appears next to them."
+      },
+      {
+        keys: ['dark mode','night mode','light mode','day mode','theme','toggle'],
+        reply: "Click the 🌙 / ☀️ button in the top-right of the navbar to switch between day and night mode. Your preference is saved automatically for next time."
+      },
+      {
+        keys: ['who are you','what are you','dee','about dee','help'],
+        reply: "I'm <strong>Dee</strong>, Campus SkillSwap's built-in assistant! I can answer questions about posting skills, booking sessions, reviews, ratings, your profile, and more. Just ask! 😊"
+      },
+      {
+        keys: ['thank','thanks','thank you','cheers','great','awesome','perfect','cool'],
+        reply: "You're welcome! 😊 Feel free to ask if you have any other questions."
+      },
+      {
+        keys: ['bye','goodbye','see you','later','exit'],
+        reply: "Goodbye! Come back any time if you need help. Happy skill-swapping! 🎓"
+      }
+    ];
+
+    var FALLBACK = "Hmm, I'm not sure about that one. Try asking about: <em>posting a skill, booking a session, leaving a review, rating a user, searching, your profile, or your dashboard</em>.";
+
+    var GREET = "Hi! I'm <strong>Dee</strong> 👋 — your Campus SkillSwap assistant. What can I help you with today?";
+
+    var QUICK_CHIPS = [
+      'Post a skill', 'Book a session', 'Leave a review',
+      'Rate a user', 'Search skills', 'My dashboard'
+    ];
+
+    /* ---- DOM refs ---- */
+    var toggle   = document.getElementById('dee-toggle');
+    var panel    = document.getElementById('dee-panel');
+    var closeBtn = document.getElementById('dee-close');
+    var messages = document.getElementById('dee-messages');
+    var chipsEl  = document.getElementById('dee-chips');
+    var input    = document.getElementById('dee-input');
+    var sendBtn  = document.getElementById('dee-send');
+
+    var opened = false;
+
+    /* ---- Open / close ---- */
+    function openPanel() {
+      panel.classList.add('dee-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      opened = true;
+      input.focus();
+    }
+    function closePanel() {
+      panel.classList.remove('dee-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    toggle.addEventListener('click', function () {
+      if (panel.classList.contains('dee-open')) { closePanel(); } else { openPanel(); }
+    });
+    closeBtn.addEventListener('click', closePanel);
+
+    /* ---- Add a message bubble ---- */
+    function addMsg(text, role) {
+      var div = document.createElement('div');
+      div.className = 'dee-msg ' + role;
+      div.innerHTML = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    /* ---- Match a reply ---- */
+    function getReply(text) {
+      var lower = text.toLowerCase();
+      for (var i = 0; i < KB.length; i++) {
+        var entry = KB[i];
+        for (var j = 0; j < entry.keys.length; j++) {
+          if (lower.indexOf(entry.keys[j]) !== -1) {
+            return entry.reply;
+          }
+        }
+      }
+      return FALLBACK;
+    }
+
+    /* ---- Handle user input ---- */
+    function handleSend() {
+      var text = input.value.trim();
+      if (!text) return;
+      addMsg(text, 'user');
+      input.value = '';
+      setTimeout(function () { addMsg(getReply(text), 'bot'); }, 350);
+    }
+
+    sendBtn.addEventListener('click', handleSend);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
+    });
+
+    /* ---- Quick-reply chips ---- */
+    QUICK_CHIPS.forEach(function (label) {
+      var btn = document.createElement('button');
+      btn.className = 'dee-chip';
+      btn.textContent = label;
+      btn.addEventListener('click', function () {
+        addMsg(label, 'user');
+        setTimeout(function () { addMsg(getReply(label), 'bot'); }, 350);
+      });
+      chipsEl.appendChild(btn);
+    });
+
+    /* ---- Greeting on first open ---- */
+    var greeted = false;
+    toggle.addEventListener('click', function () {
+      if (!greeted && panel.classList.contains('dee-open')) {
+        greeted = true;
+        setTimeout(function () { addMsg(GREET, 'bot'); }, 200);
+      }
+    });
+  })();
+  </script>
+
+  <script>
+    // --- Theme toggle logic ---
+    const btn  = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+
+    // Set the button icon to match the current theme
+    function updateIcon() {
+      btn.textContent = html.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      btn.title = html.getAttribute('data-theme') === 'dark'
+        ? 'Switch to day mode'
+        : 'Switch to night mode';
+    }
+
+    updateIcon(); // run once on page load
+
+    btn.addEventListener('click', function () {
+      var current = html.getAttribute('data-theme');
+      var next    = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next); // remember choice across pages
+      updateIcon();
+    });
+  </script>
+
+</body>
+</html>
